@@ -32,7 +32,7 @@ public class DialogoAuth extends JDialog {
         JPanel pLogin = new JPanel(new GridLayout(6, 1, 8, 8));
         pLogin.setBorder(new EmptyBorder(15, 25, 15, 25));
 
-        JLabel lblHint = new JLabel("Prueba: Laura_98, CarlosM, admin (clave: 1234 / Admin1234)");
+        JLabel lblHint = new JLabel("Prueba: Moreno, Ignacio, admin (clave: 1234 / Admin1234)");
         lblHint.setFont(new Font("SansSerif", Font.ITALIC, 11));
         lblHint.setForeground(Color.GRAY);
 
@@ -43,9 +43,9 @@ public class DialogoAuth extends JDialog {
         btnEntrar.setBackground(JFramePrincipal.COLOR_PRIMARIO);
         btnEntrar.setForeground(Color.WHITE);
 
-        JButton btnDemo = new JButton("Entrar como Laura_98");
+        JButton btnDemo = new JButton("Entrar como Moreno");
         btnDemo.addActionListener(e -> {
-            gestor.iniciarSesion("Laura_98", "1234");
+            gestor.iniciarSesion("Moreno", "1234");
             autenticado = true;
             dispose();
         });

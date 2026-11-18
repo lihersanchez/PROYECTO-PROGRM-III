@@ -521,7 +521,7 @@ public class JFramePrincipal extends JFrame {
                 Usuario otro = conv.getComprador() == gestor.getUsuarioActivo()
                         ? conv.getVendedor() : conv.getComprador();
                 String ultimoMsg = conv.getMensajes().isEmpty()
-                        ? "Sin mensajes aún"
+                        ? ""
                         : conv.getMensajes().get(conv.getMensajes().size() - 1).getTexto();
 
                 JPanel fila = new JPanel(new BorderLayout(15, 5));
@@ -543,14 +543,7 @@ public class JFramePrincipal extends JFrame {
                 btnAbrir.setForeground(Color.WHITE);
                 btnAbrir.addActionListener(e -> abrirChat(conv));
 
-                JButton btnVentana = new JButton("Ventana aparte");
-                btnVentana.addActionListener(e -> {
-                    VentanaChat ventana = new VentanaChat(conv, gestor.getUsuarioActivo());
-                    ventana.setVisible(true);
-                });
-
                 botonesChat.add(btnAbrir);
-                botonesChat.add(btnVentana);
 
                 fila.add(lblInfo, BorderLayout.CENTER);
                 fila.add(botonesChat, BorderLayout.EAST);

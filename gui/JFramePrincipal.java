@@ -1,4 +1,4 @@
-package JFrame;
+package gui;
 
 import java.awt.*;
 import java.net.URL;

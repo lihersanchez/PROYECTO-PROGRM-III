@@ -76,7 +76,7 @@ public class Usuario {
     	return email; 
     	}
     public String getPassword() { 
-    	return password;
+    	return password; 
     	}
     public String getCiudad() { 
     	return ciudad; 

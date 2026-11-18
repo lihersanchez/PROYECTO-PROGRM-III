@@ -1,253 +1,607 @@
 package gui;
 
-import java.awt.*;
-import java.net.URL;
-import java.util.Vector;
-import javax.swing.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridLayout;
+import java.awt.Image;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.File;
+import java.util.List;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.border.EmptyBorder;
 
 import domain.Articulo;
+import domain.Categoria;
 import domain.Conversacion;
 import domain.GestorTienda;
-import domain.Mensaje;
 import domain.Usuario;
 
 public class JFramePrincipal extends JFrame {
+    private static final long serialVersionUID = 1L;
 
     public static final Color COLOR_PRIMARIO = new Color(0, 119, 130);
+    public static final Color COLOR_FONDO_GRIS = new Color(245, 246, 247);
 
-    // Uso el mismo gestor para la sesion del usuario y sus conversaciones
-    private GestorTienda gestor = new GestorTienda();
-    private JPanel panelContenido = new JPanel(new BorderLayout());
+    private final GestorTienda gestor = new GestorTienda();
+    private final JPanel contenido = new JPanel(new BorderLayout());
 
-    private JPanel panelPrincipal;
-    private JPanel panelDeNavegacion;
-    private JPanel panelDeNavegacionNorte;
-    private JPanel panelDeNavegacionSur;
     private JTextField txtBuscar;
-    private Vector<String> categoriasNavegacion;
+    private JButton btnLogin;
+    private JButton btnPerfil;
+    private JButton btnEstadisticas;
+    private JLabel lblSaldoHeader;
 
     public JFramePrincipal() {
         configurarVentana();
         inicializarComponentes();
-        configurarEventos();
+        cargarCatalogoEnSegundoPlano();
     }
 
     private void configurarVentana() {
         setTitle("UrbanDeal");
-        setSize(1920, 1080);
+        setSize(1280, 800);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        URL iconUrl = getClass().getResource("/fire/images/logo.jpg");
-        if (iconUrl != null) {
-            ImageIcon icono = new ImageIcon(iconUrl);
+        ImageIcon icono = new ImageIcon("resources images/logo.jpg");
+        if (icono.getImage() != null) {
             this.setIconImage(icono.getImage());
         }
     }
 
+    // Requisito Entrega 1: Thread independiente de la GUI para tarea costosa de carga
+    private void cargarCatalogoEnSegundoPlano() {
+        JPanel panelCarga = new JPanel(new BorderLayout(10, 10));
+        panelCarga.setBackground(COLOR_FONDO_GRIS);
+        panelCarga.setBorder(new EmptyBorder(220, 350, 220, 350));
+
+        JLabel lblCargando = new JLabel("Cargando catálogo de UrbanDeal...", SwingConstants.CENTER);
+        lblCargando.setFont(new Font("SansSerif", Font.BOLD, 16));
+
+        JProgressBar barraProgreso = new JProgressBar(0, 100);
+        barraProgreso.setStringPainted(true);
+        barraProgreso.setForeground(COLOR_PRIMARIO);
+
+        panelCarga.add(lblCargando, BorderLayout.NORTH);
+        panelCarga.add(barraProgreso, BorderLayout.CENTER);
+        mostrarContenido(panelCarga);
+
+        Thread hiloCarga = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    for (int i = 0; i <= 100; i += 20) {
+                        final int progreso = i;
+                        SwingUtilities.invokeLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                barraProgreso.setValue(progreso);
+                            }
+                        });
+                        Thread.sleep(120);
+                    }
+                    final List<Articulo> iniciales = gestor.getArticulosDisponibles();
+                    SwingUtilities.invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            mostrarCatalogo(iniciales, "Novedades en UrbanDeal");
+                        }
+                    });
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+        hiloCarga.start();
+    }
+
     private void inicializarComponentes() {
-        panelPrincipal = new JPanel(new BorderLayout());
+        JPanel panelPrincipal = new JPanel(new BorderLayout());
         panelPrincipal.setBackground(Color.WHITE);
 
-        panelDeNavegacion = new JPanel(new BorderLayout());
+        JPanel panelDeNavegacion = new JPanel(new BorderLayout());
         panelDeNavegacion.setBackground(Color.WHITE);
-        panelDeNavegacion.setBorder(BorderFactory.createLineBorder(new Color(0, 119, 130), 2));
+        panelDeNavegacion.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(220, 220, 220)));
 
-        panelDeNavegacionNorte = new JPanel(new BorderLayout(15, 0));
+        JPanel panelDeNavegacionNorte = new JPanel(new BorderLayout(15, 0));
         panelDeNavegacionNorte.setBackground(Color.WHITE);
-        panelDeNavegacionNorte.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        panelDeNavegacionNorte.setBorder(new EmptyBorder(10, 25, 10, 25));
 
+        // Logo con MouseListener
         JLabel lblLogo = new JLabel("UrbanDeal");
-        URL logoUrl = getClass().getResource("/fire/images/logoconnombre.jpg");
-        if (logoUrl != null) {
-            ImageIcon iconoOriginal = new ImageIcon(logoUrl);
-            Image imagenEscalada = iconoOriginal.getImage().getScaledInstance(200, 70, Image.SCALE_SMOOTH);
+        lblLogo.setFont(new Font("SansSerif", Font.BOLD, 26));
+        lblLogo.setForeground(COLOR_PRIMARIO);
+        File archivoLogo = new File("resources images/logoconnombre.jpg");
+        if (archivoLogo.exists()) {
+            ImageIcon iconoOriginal = new ImageIcon(archivoLogo.getPath());
+            Image imagenEscalada = iconoOriginal.getImage().getScaledInstance(180, 55, Image.SCALE_SMOOTH);
             lblLogo = new JLabel(new ImageIcon(imagenEscalada));
         }
+
+        lblLogo.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        lblLogo.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                txtBuscar.setText("");
+                mostrarCatalogo(gestor.getArticulosDisponibles(), "Novedades en UrbanDeal");
+            }
+        });
         panelDeNavegacionNorte.add(lblLogo, BorderLayout.WEST);
 
-        JPanel panelBuscador = new JPanel(new BorderLayout());
-        panelBuscador.setBackground(new Color(240, 240, 240));
-        panelBuscador.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        // Buscador con KeyListener (requisito obligatorio Entrega 1)
+        JPanel panelBuscador = new JPanel(new BorderLayout(8, 0));
+        panelBuscador.setBackground(new Color(240, 242, 242));
+        panelBuscador.setBorder(new EmptyBorder(6, 12, 6, 12));
 
-        txtBuscar = new JTextField("Buscar artículos...");
-        txtBuscar.setForeground(Color.GRAY);
-        txtBuscar.setBackground(new Color(240, 240, 240));
+        txtBuscar = new JTextField();
+        txtBuscar.setFont(new Font("SansSerif", Font.PLAIN, 14));
+        txtBuscar.setBackground(new Color(240, 242, 242));
         txtBuscar.setBorder(null);
-        panelBuscador.add(txtBuscar, BorderLayout.CENTER);
+        txtBuscar.setToolTipText("Escribe para buscar en tiempo real o pulsa ESC para limpiar");
 
-        panelDeNavegacionNorte.add(panelBuscador, BorderLayout.CENTER);
-
-        JPanel panelAcciones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
-        panelAcciones.setBackground(Color.WHITE);
-
-        JButton btnLogin = new JButton("Iniciar sesión");
-        btnLogin.setFocusable(false);
-
-        JButton btnVender = new JButton("Vender ahora");
-        btnVender.setBackground(new Color(0, 119, 130));
-        btnVender.setForeground(Color.WHITE);
-        btnVender.setFocusable(false);
-
-        JButton btnMensajes = new JButton("Mensajes");
-        btnMensajes.setFocusable(false);
-        btnMensajes.addActionListener(e -> {
-            mostrarConversaciones();
+        txtBuscar.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    txtBuscar.setText("");
+                    mostrarCatalogo(gestor.getArticulosDisponibles(), "Todos los artículos");
+                } else {
+                    ejecutarBusqueda();
+                }
+            }
         });
 
-        JComboBox<String> comboIdioma = new JComboBox<>(new String[]{"ES", "EN", "FR"});
-        comboIdioma.setBackground(Color.WHITE);
+        JButton btnBuscar = new JButton("Buscar");
+        btnBuscar.setBackground(Color.WHITE);
+        btnBuscar.setForeground(COLOR_PRIMARIO);
+        btnBuscar.setFocusable(false);
+        btnBuscar.addActionListener(e -> ejecutarBusqueda());
 
+        panelBuscador.add(new JLabel("Buscar:"), BorderLayout.WEST);
+        panelBuscador.add(txtBuscar, BorderLayout.CENTER);
+        panelBuscador.add(btnBuscar, BorderLayout.EAST);
+        panelDeNavegacionNorte.add(panelBuscador, BorderLayout.CENTER);
+
+        // Botones de navegación
+        JPanel panelAcciones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 5));
+        panelAcciones.setBackground(Color.WHITE);
+
+        lblSaldoHeader = new JLabel("");
+        lblSaldoHeader.setFont(new Font("SansSerif", Font.BOLD, 13));
+        lblSaldoHeader.setForeground(new Color(60, 60, 60));
+
+        JButton btnTienda = crearBotonNav("Tienda");
+        btnTienda.addActionListener(e -> mostrarCatalogo(gestor.getArticulosDisponibles(), "Todos los artículos"));
+
+        JButton btnMensajes = crearBotonNav("Mensajes");
+        btnMensajes.addActionListener(e -> mostrarConversaciones());
+
+        btnEstadisticas = crearBotonNav("Estadísticas");
+        btnEstadisticas.setVisible(false);
+        btnEstadisticas.addActionListener(e -> {
+            if (gestor.esAdministradorActivo()) {
+                mostrarContenido(new PanelEstadisticas(gestor));
+            } else {
+                JOptionPane.showMessageDialog(this, "Acceso reservado al administrador.",
+                        "Acceso denegado", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+
+        btnPerfil = crearBotonNav("Mi Perfil");
+        btnPerfil.setVisible(false);
+        btnPerfil.addActionListener(e -> {
+            if (gestor.getUsuarioActivo() != null) {
+                DialogoPerfil dialogo = new DialogoPerfil(this, gestor);
+                dialogo.setVisible(true);
+                actualizarEstadoSesionUI();
+            }
+        });
+
+        btnLogin = crearBotonNav("Regístrate | Inicia sesión");
+        btnLogin.addActionListener(e -> gestionarBotonAuth());
+
+        JButton btnVender = new JButton("Vender ahora");
+        btnVender.setBackground(COLOR_PRIMARIO);
+        btnVender.setForeground(Color.WHITE);
+        btnVender.setFont(new Font("SansSerif", Font.BOLD, 13));
+        btnVender.setFocusable(false);
+        btnVender.addActionListener(e -> {
+            if (asegurarSesion()) {
+                DialogoVender dialogo = new DialogoVender(this, gestor);
+                dialogo.setVisible(true);
+                if (dialogo.isPublicado()) {
+                    mostrarCatalogo(gestor.getArticulosDisponibles(), "Novedades en UrbanDeal");
+                }
+            }
+        });
+
+        panelAcciones.add(lblSaldoHeader);
+        panelAcciones.add(btnTienda);
+        panelAcciones.add(btnMensajes);
+        panelAcciones.add(btnEstadisticas);
+        panelAcciones.add(btnPerfil);
         panelAcciones.add(btnLogin);
         panelAcciones.add(btnVender);
-        panelAcciones.add(btnMensajes);
-        panelAcciones.add(comboIdioma);
 
         panelDeNavegacionNorte.add(panelAcciones, BorderLayout.EAST);
 
-        panelDeNavegacionSur = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 8));
+        // Barra de categorías
+        JPanel panelDeNavegacionSur = new JPanel(new FlowLayout(FlowLayout.CENTER, 25, 8));
         panelDeNavegacionSur.setBackground(Color.WHITE);
 
-        categoriasNavegacion = new Vector<>();
-        categoriasNavegacion.add("Todo");
-        categoriasNavegacion.add("Mujer");
-        categoriasNavegacion.add("Hombre");
-        categoriasNavegacion.add("Niños");
-        categoriasNavegacion.add("Hogar");
-        categoriasNavegacion.add("Electrónica");
+        JButton btnTodo = crearBotonCategoria("Todo");
+        btnTodo.addActionListener(e -> mostrarCatalogo(gestor.getArticulosDisponibles(), "Todos los artículos"));
+        panelDeNavegacionSur.add(btnTodo);
 
-        for (String textoBoton : categoriasNavegacion) {
-            JButton boton = new JButton(textoBoton);
-            boton.setFocusable(false);
-            boton.setBorderPainted(false);
-            boton.setContentAreaFilled(false);
-            boton.setForeground(new Color(80, 80, 80));
-            boton.addActionListener(e -> accionBotonCategoria(textoBoton));
+        for (Categoria cat : Categoria.values()) {
+            JButton boton = crearBotonCategoria(cat.toString());
+            boton.addActionListener(e -> mostrarCatalogo(gestor.filtrarPorCategoria(cat), "Categoría: " + cat.toString()));
             panelDeNavegacionSur.add(boton);
         }
 
         panelDeNavegacion.add(panelDeNavegacionNorte, BorderLayout.NORTH);
         panelDeNavegacion.add(panelDeNavegacionSur, BorderLayout.SOUTH);
 
-        JPanel panelWEST = new JPanel();
-        panelWEST.setBackground(Color.WHITE);
-
-        JPanel panelEAST = new JPanel();
-        panelEAST.setBackground(Color.WHITE);
-
-        // En el centro muestro la lista de conversaciones o el chat abierto
-        panelContenido.setBackground(Color.WHITE);
-        panelPrincipal.add(panelContenido, BorderLayout.CENTER);
         panelPrincipal.add(panelDeNavegacion, BorderLayout.NORTH);
-        panelPrincipal.add(panelWEST, BorderLayout.WEST);
-        panelPrincipal.add(panelEAST, BorderLayout.EAST);
+        panelPrincipal.add(contenido, BorderLayout.CENTER);
 
         this.add(panelPrincipal);
     }
 
-    private void configurarEventos() {
-        
+    private JButton crearBotonNav(String texto) {
+        JButton btn = new JButton(texto);
+        btn.setForeground(COLOR_PRIMARIO);
+        btn.setBackground(Color.WHITE);
+        btn.setFont(new Font("SansSerif", Font.BOLD, 13));
+        btn.setFocusable(false);
+        return btn;
     }
 
-    private void accionBotonCategoria(String categoria) {
-        System.out.println("Se ha seleccionado la categoría: " + categoria);
+    private JButton crearBotonCategoria(String texto) {
+        JButton boton = new JButton(texto);
+        boton.setFocusable(false);
+        boton.setFont(new Font("SansSerif", Font.PLAIN, 15));
+        boton.setBorderPainted(false);
+        boton.setContentAreaFilled(false);
+        boton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        boton.setForeground(new Color(80, 80, 80));
+
+        boton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                boton.setForeground(COLOR_PRIMARIO);
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                boton.setForeground(new Color(80, 80, 80));
+            }
+        });
+        return boton;
     }
 
-    public GestorTienda getGestor() {
-        return gestor;
+    private void mostrarContenido(Component panel) {
+        contenido.removeAll();
+        contenido.add(panel, BorderLayout.CENTER);
+        contenido.revalidate();
+        contenido.repaint();
     }
 
-    // Desde el boton de un articulo llamo a este metodo para contactar al vendedor
-    public void contactarVendedor(Articulo articulo) {
-        if (gestor.getUsuarioActivo() == null) {
-            JOptionPane.showMessageDialog(this, "Inicia sesion para enviar mensajes");
-            return;
+    private void ejecutarBusqueda() {
+        String query = txtBuscar.getText();
+        List<Articulo> resultados = gestor.buscarPorTexto(query);
+        String titulo = query.trim().isEmpty()
+                ? "Todos los artículos"
+                : "Resultados para \"" + query + "\" (" + resultados.size() + ")";
+        mostrarCatalogo(resultados, titulo);
+    }
+
+    public void mostrarCatalogo(List<Articulo> articulos, String titulo) {
+        JPanel contenedor = new JPanel(new BorderLayout());
+        contenedor.setBackground(COLOR_FONDO_GRIS);
+        contenedor.setBorder(new EmptyBorder(20, 40, 20, 40));
+
+        JLabel lblTitulo = new JLabel(titulo);
+        lblTitulo.setFont(new Font("SansSerif", Font.BOLD, 22));
+        lblTitulo.setForeground(new Color(40, 40, 40));
+        lblTitulo.setBorder(new EmptyBorder(0, 0, 15, 0));
+        contenedor.add(lblTitulo, BorderLayout.NORTH);
+
+        JPanel grid = new JPanel(new GridLayout(0, 4, 20, 20));
+        grid.setBackground(COLOR_FONDO_GRIS);
+
+        if (articulos.isEmpty()) {
+            JLabel lblVacio = new JLabel("No hay artículos disponibles en esta categoría o búsqueda.");
+            lblVacio.setFont(new Font("SansSerif", Font.ITALIC, 16));
+            lblVacio.setForeground(Color.GRAY);
+            grid.add(lblVacio);
+        } else {
+            for (Articulo art : articulos) {
+                grid.add(crearTarjetaArticulo(art));
+            }
         }
 
+        JPanel panelEnvoltorGrid = new JPanel(new BorderLayout());
+        panelEnvoltorGrid.setBackground(COLOR_FONDO_GRIS);
+        panelEnvoltorGrid.add(grid, BorderLayout.NORTH);
+
+        JScrollPane scroll = new JScrollPane(panelEnvoltorGrid);
+        scroll.setBorder(null);
+        contenedor.add(scroll, BorderLayout.CENTER);
+        mostrarContenido(contenedor);
+    }
+
+    private JPanel crearTarjetaArticulo(Articulo art) {
+        JPanel tarjeta = new JPanel(new BorderLayout());
+        tarjeta.setBackground(Color.WHITE);
+        tarjeta.setBorder(BorderFactory.createLineBorder(new Color(225, 225, 225), 1));
+
+        JPanel topCard = new JPanel(new BorderLayout());
+        topCard.setBackground(Color.WHITE);
+        topCard.setBorder(new EmptyBorder(8, 10, 8, 10));
+        JLabel lblVendedor = new JLabel(art.getVendedor().getNombreUsuario() + " (" + art.getVendedor().getCiudad() + ")");
+        lblVendedor.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        lblVendedor.setForeground(Color.GRAY);
+        topCard.add(lblVendedor, BorderLayout.WEST);
+
+        JLabel lblImagen = new JLabel("", SwingConstants.CENTER);
+        lblImagen.setPreferredSize(new Dimension(240, 190));
+        lblImagen.setBackground(new Color(248, 248, 248));
+        lblImagen.setOpaque(true);
+        lblImagen.setIcon(cargarIcono(art.getRutaImagen(), 220, 180));
+        lblImagen.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        lblImagen.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                abrirDetalleArticulo(art);
+            }
+        });
+
+        JPanel pieTarjeta = new JPanel();
+        pieTarjeta.setLayout(new BoxLayout(pieTarjeta, BoxLayout.Y_AXIS));
+        pieTarjeta.setBackground(Color.WHITE);
+        pieTarjeta.setBorder(new EmptyBorder(10, 12, 12, 12));
+
+        JPanel filaPrecioLikes = new JPanel(new BorderLayout());
+        filaPrecioLikes.setBackground(Color.WHITE);
+
+        JLabel lblPrecio = new JLabel(String.format("%.2f €", art.getPrecio()));
+        lblPrecio.setFont(new Font("SansSerif", Font.BOLD, 16));
+
+        Usuario activo = gestor.getUsuarioActivo();
+        boolean esFav = activo != null && activo.esFavorito(art);
+        JButton btnLike = new JButton((esFav ? "♥ " : "♡ ") + art.getLikes());
+        btnLike.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        btnLike.setForeground(esFav ? Color.RED : Color.GRAY);
+        btnLike.setBorderPainted(false);
+        btnLike.setContentAreaFilled(false);
+        btnLike.setFocusable(false);
+        btnLike.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        btnLike.addActionListener(e -> {
+            if (!asegurarSesion()) {
+                return;
+            }
+            gestor.getUsuarioActivo().toggleFavorito(art);
+            boolean ahoraFav = gestor.getUsuarioActivo().esFavorito(art);
+            btnLike.setText((ahoraFav ? "♥ " : "♡ ") + art.getLikes());
+            btnLike.setForeground(ahoraFav ? Color.RED : Color.GRAY);
+        });
+
+        filaPrecioLikes.add(lblPrecio, BorderLayout.WEST);
+        filaPrecioLikes.add(btnLike, BorderLayout.EAST);
+
+        JLabel lblTitulo = new JLabel(art.getTitulo());
+        lblTitulo.setFont(new Font("SansSerif", Font.PLAIN, 14));
+
+        JLabel lblMeta = new JLabel(art.getMarca() + " · Talla " + art.getTalla());
+        lblMeta.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        lblMeta.setForeground(Color.GRAY);
+
+        JPanel filaBotones = new JPanel(new GridLayout(1, 2, 6, 0));
+        filaBotones.setBackground(Color.WHITE);
+        filaBotones.setBorder(new EmptyBorder(8, 0, 0, 0));
+
+        JButton btnVer = new JButton("Ver / Comprar");
+        btnVer.setBackground(COLOR_PRIMARIO);
+        btnVer.setForeground(Color.WHITE);
+        btnVer.setFont(new Font("SansSerif", Font.BOLD, 11));
+        btnVer.setFocusable(false);
+        btnVer.addActionListener(e -> abrirDetalleArticulo(art));
+
+        JButton btnChat = new JButton("Mensaje");
+        btnChat.setBackground(Color.WHITE);
+        btnChat.setForeground(COLOR_PRIMARIO);
+        btnChat.setFont(new Font("SansSerif", Font.BOLD, 11));
+        btnChat.setFocusable(false);
+        btnChat.addActionListener(e -> contactarVendedor(art));
+
+        filaBotones.add(btnVer);
+        filaBotones.add(btnChat);
+
+        pieTarjeta.add(filaPrecioLikes);
+        pieTarjeta.add(Box.createVerticalStrut(4));
+        pieTarjeta.add(lblTitulo);
+        pieTarjeta.add(lblMeta);
+        pieTarjeta.add(filaBotones);
+
+        tarjeta.add(topCard, BorderLayout.NORTH);
+        tarjeta.add(lblImagen, BorderLayout.CENTER);
+        tarjeta.add(pieTarjeta, BorderLayout.SOUTH);
+
+        return tarjeta;
+    }
+
+    public static ImageIcon cargarIcono(String ruta, int ancho, int alto) {
+        ImageIcon icono = null;
+        if (ruta != null && new File(ruta).exists()) {
+            icono = new ImageIcon(ruta);
+        }
+        if (icono == null || icono.getIconWidth() <= 0) {
+            icono = new ImageIcon("resources images/logo.jpg");
+        }
+        Image imagenEscalada = icono.getImage().getScaledInstance(ancho, alto, Image.SCALE_SMOOTH);
+        return new ImageIcon(imagenEscalada);
+    }
+
+    private void abrirDetalleArticulo(Articulo art) {
+        DialogoDetalleArticulo dialogo = new DialogoDetalleArticulo(this, gestor, art);
+        dialogo.setVisible(true);
+        if (dialogo.isComprado()) {
+            actualizarEstadoSesionUI();
+        } else if (dialogo.isQuiereContactar()) {
+            contactarVendedor(art);
+        }
+    }
+
+    public void contactarVendedor(Articulo articulo) {
+        if (!asegurarSesion()) {
+            return;
+        }
         try {
-            Conversacion conversacion = gestor.contactarVendedor(articulo);
-            abrirChat(conversacion);
-        } catch (IllegalArgumentException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage());
+            Conversacion chat = gestor.contactarVendedor(articulo);
+            abrirChat(chat);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Aviso", JOptionPane.WARNING_MESSAGE);
         }
     }
 
     private void abrirChat(Conversacion conversacion) {
-        PanelChat chat = new PanelChat(conversacion, gestor.getUsuarioActivo(), this);
-        mostrarContenido(chat);
+        PanelChat panelChat = new PanelChat(conversacion, gestor.getUsuarioActivo(), this);
+        mostrarContenido(panelChat);
     }
 
-    // Este metodo tambien se llama al pulsar Volver a mensajes dentro del chat
     public void mostrarConversaciones() {
-        Usuario usuario = gestor.getUsuarioActivo();
-        if (usuario == null) {
-            JOptionPane.showMessageDialog(this, "Inicia sesion para ver tus mensajes");
+        if (!asegurarSesion()) {
             return;
         }
 
-        JPanel mensajes = new JPanel(new BorderLayout(10, 10));
-        mensajes.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        mensajes.add(new JLabel("Tus mensajes"), BorderLayout.NORTH);
+        JPanel contenedor = new JPanel(new BorderLayout(10, 10));
+        contenedor.setBackground(COLOR_FONDO_GRIS);
+        contenedor.setBorder(new EmptyBorder(20, 40, 20, 40));
+
+        JLabel titulo = new JLabel("Tus mensajes");
+        titulo.setFont(new Font("SansSerif", Font.BOLD, 22));
+        contenedor.add(titulo, BorderLayout.NORTH);
 
         JPanel lista = new JPanel();
         lista.setLayout(new BoxLayout(lista, BoxLayout.Y_AXIS));
-        boolean hayConversaciones = false;
+        lista.setBackground(COLOR_FONDO_GRIS);
 
-        // El gestor devuelve las conversaciones en las que participa el usuario
-        for (Conversacion conversacion : gestor.getConversacionesUsuarioActivo()) {
-            hayConversaciones = true;
-            Usuario otro;
-            if (usuario == conversacion.getComprador()) {
-                otro = conversacion.getVendedor();
-            } else {
-                otro = conversacion.getComprador();
+        List<Conversacion> conversaciones = gestor.getConversacionesUsuarioActivo();
+        if (conversaciones.isEmpty()) {
+            JLabel vacio = new JLabel("No tienes conversaciones todavía. Ve a Tienda y pulsa 'Mensaje' en un artículo.");
+            vacio.setFont(new Font("SansSerif", Font.ITALIC, 15));
+            vacio.setForeground(Color.GRAY);
+            lista.add(vacio);
+        } else {
+            for (Conversacion conv : conversaciones) {
+                Usuario otro = conv.getComprador() == gestor.getUsuarioActivo()
+                        ? conv.getVendedor() : conv.getComprador();
+                String ultimoMsg = conv.getMensajes().isEmpty()
+                        ? "Sin mensajes aún"
+                        : conv.getMensajes().get(conv.getMensajes().size() - 1).getTexto();
+
+                JPanel fila = new JPanel(new BorderLayout(15, 5));
+                fila.setBackground(Color.WHITE);
+                fila.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(220, 220, 220)),
+                        new EmptyBorder(12, 15, 12, 15)
+                ));
+                fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 75));
+
+                JLabel lblInfo = new JLabel("<html><b>" + conv.getArticulo().getTitulo() + "</b> · Chat con <b>"
+                        + otro.getNombreUsuario() + "</b><br><font color='gray'>" + ultimoMsg + "</font></html>");
+
+                JPanel botonesChat = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+                botonesChat.setBackground(Color.WHITE);
+
+                JButton btnAbrir = new JButton("Abrir chat");
+                btnAbrir.setBackground(COLOR_PRIMARIO);
+                btnAbrir.setForeground(Color.WHITE);
+                btnAbrir.addActionListener(e -> abrirChat(conv));
+
+                JButton btnVentana = new JButton("Ventana aparte");
+                btnVentana.addActionListener(e -> {
+                    VentanaChat ventana = new VentanaChat(conv, gestor.getUsuarioActivo());
+                    ventana.setVisible(true);
+                });
+
+                botonesChat.add(btnAbrir);
+                botonesChat.add(btnVentana);
+
+                fila.add(lblInfo, BorderLayout.CENTER);
+                fila.add(botonesChat, BorderLayout.EAST);
+                lista.add(fila);
+                lista.add(Box.createVerticalStrut(10));
             }
-
-            JPanel fila = new JPanel(new BorderLayout(10, 10));
-            fila.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-            fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
-
-            JPanel informacion = new JPanel(new GridLayout(0, 1));
-            informacion.add(new JLabel(conversacion.getArticulo().getTitulo()));
-            informacion.add(new JLabel("Chat con " + otro.getNombreUsuario()));
-
-            String ultimoMensaje = "Sin mensajes todavia";
-            for (Mensaje mensaje : conversacion.getMensajes()) {
-                ultimoMensaje = mensaje.getTexto();
-            }
-            informacion.add(new JLabel(ultimoMensaje));
-            fila.add(informacion, BorderLayout.CENTER);
-
-            JPanel botones = new JPanel();
-            JButton abrir = new JButton("Abrir chat");
-            abrir.addActionListener(e -> {
-                abrirChat(conversacion);
-            });
-            botones.add(abrir);
-
-            JButton ventana = new JButton("Ventana aparte");
-            ventana.addActionListener(e -> {
-                VentanaChat chat = new VentanaChat(conversacion, usuario);
-                chat.setVisible(true);
-            });
-            botones.add(ventana);
-            fila.add(botones, BorderLayout.EAST);
-            lista.add(fila);
         }
 
-        if (!hayConversaciones) {
-            lista.add(new JLabel("Todavia no tienes conversaciones"));
-        }
-
-        mensajes.add(new JScrollPane(lista), BorderLayout.CENTER);
-        mostrarContenido(mensajes);
+        contenedor.add(new JScrollPane(lista), BorderLayout.CENTER);
+        mostrarContenido(contenedor);
     }
 
-    // Cambio solo el panel central para mantener la barra de navegacion
-    private void mostrarContenido(JPanel panel) {
-        panelContenido.removeAll();
-        panelContenido.add(panel, BorderLayout.CENTER);
-        panelContenido.revalidate();
-        panelContenido.repaint();
+    public boolean asegurarSesion() {
+        if (gestor.getUsuarioActivo() != null) {
+            return true;
+        }
+        DialogoAuth dialogo = new DialogoAuth(this, gestor);
+        dialogo.setVisible(true);
+        if (dialogo.isAutenticado()) {
+            actualizarEstadoSesionUI();
+            return true;
+        }
+        return false;
+    }
+
+    private void gestionarBotonAuth() {
+        if (gestor.getUsuarioActivo() != null) {
+            int confirmar = JOptionPane.showConfirmDialog(this,
+                    "¿Seguro que quieres cerrar sesión?", "Cerrar sesión", JOptionPane.YES_NO_OPTION);
+            if (confirmar == JOptionPane.YES_OPTION) {
+                gestor.cerrarSesion();
+                actualizarEstadoSesionUI();
+            }
+        } else {
+            asegurarSesion();
+        }
+    }
+
+    public void actualizarEstadoSesionUI() {
+        btnEstadisticas.setVisible(gestor.esAdministradorActivo());
+        Usuario activo = gestor.getUsuarioActivo();
+        if (activo != null) {
+            btnLogin.setText("Cerrar sesión");
+            btnPerfil.setText(activo.getNombreUsuario());
+            btnPerfil.setVisible(true);
+            lblSaldoHeader.setText(String.format("Saldo: %.2f €", activo.getSaldo()));
+        } else {
+            btnLogin.setText("Regístrate | Inicia sesión");
+            btnPerfil.setVisible(false);
+            lblSaldoHeader.setText("");
+        }
+        mostrarCatalogo(gestor.getArticulosDisponibles(), "Novedades en UrbanDeal");
     }
 }

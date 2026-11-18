@@ -76,6 +76,7 @@ public class JFramePrincipal extends JFrame {
         btnVender.setBackground(new Color(0, 119, 130));
         btnVender.setForeground(Color.WHITE);
         btnVender.setFocusable(false);
+        btnVender.addActionListener(e -> abrirDialogoVender());
 
         JComboBox<String> comboIdioma = new JComboBox<>(new String[]{"ES", "EN", "FR"});
         comboIdioma.setBackground(Color.WHITE);
@@ -123,7 +124,12 @@ public class JFramePrincipal extends JFrame {
         this.add(panelPrincipal);
     }
 
-    private void configurarEventos() {
+    private Object abrirDialogoVender() {
+		
+		return null;
+	}
+
+	private void configurarEventos() {
         
     }
 

@@ -30,19 +30,19 @@ public class GestorTienda {
         usuarios.add(admin);
 
         publicarArticulo(new Articulo("Chaqueta vaquera", "Corte oversize, perfecta para entretiempo", "Levi's", "M", 25.00,
-                Categoria.MUJER, Subcategoria.ABRIGOS, EstadoArticulo.MUY_BUENO, u1, "resources images/chaqueta.jpg"));
+                Categoria.MUJER, Subcategoria.ABRIGOS, EstadoArticulo.MUY_BUENO, u1, "resources images/chaqueta.png"));
 
         publicarArticulo(new Articulo("Zapatillas Air Max", "Poco uso, incluye caja original", "Nike", "42", 45.00,
-                Categoria.HOMBRE, Subcategoria.CALZADO, EstadoArticulo.BUENO, u2, "resources images/zapatillas.jpg"));
+                Categoria.HOMBRE, Subcategoria.CALZADO, EstadoArticulo.BUENO, u2, "resources images/zapatillas.png"));
 
         publicarArticulo(new Articulo("Auriculares BT WH-1000", "Cancelación activa de ruido, batería intacta", "Sony", "Única", 60.00,
-                Categoria.ELECTRONICA, Subcategoria.AUDIO, EstadoArticulo.NUEVO_CON_ETIQUETA, u3, "resources images/auriculares.jpg"));
+                Categoria.ELECTRONICA, Subcategoria.AUDIO, EstadoArticulo.NUEVO_CON_ETIQUETA, u3, "resources images/auriculares.png"));
 
         publicarArticulo(new Articulo("Vestido floral verano", "Tejido ligero, puesto una sola vez", "Zara", "S", 15.50,
-                Categoria.MUJER, Subcategoria.VESTIDOS, EstadoArticulo.NUEVO_SIN_ETIQUETA, u1, "resources images/vestido.jpg"));
+                Categoria.MUJER, Subcategoria.VESTIDOS, EstadoArticulo.NUEVO_SIN_ETIQUETA, u1, "resources images/vestido.png"));
 
         publicarArticulo(new Articulo("Lámpara minimalista", "Luz cálida, ideal para escritorio", "Ikea", "Única", 12.00,
-                Categoria.HOGAR, Subcategoria.DECORACION, EstadoArticulo.MUY_BUENO, u2, "resources images/lampara.jpg"));
+                Categoria.HOGAR, Subcategoria.DECORACION, EstadoArticulo.MUY_BUENO, u2, "resources images/lampara.png"));
     }
 
     public boolean registrarUsuario(String nombre, String email, String password, String ciudad) {
